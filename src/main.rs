@@ -1,10 +1,10 @@
 use config::Config;
-use std::{collections::HashSet, env::temp_dir, hash::Hash};
-use git2::Repository;
-use tempdir::TempDir;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hasher};
+use std::hash::Hasher;
 use std::path::Path;
+use std::process::Command;
+use std::{collections::HashSet, env::temp_dir, hash::Hash};
+use tempdir::TempDir;
 
 fn debug_print(debug: bool, msg: String) {
     if debug {
@@ -31,7 +31,10 @@ fn main() {
         let tmp_dir = TempDir::new(&hash).unwrap();
         debug_print(debug, format!("{:?}", tmp_dir.path()));
 
-        let repo = git2::Repository::clone(&url, Path::new("tmp/pubkeys")).unwrap();
+        let mut git_clone = Command::new("git");
+        git_clone.args(["clone", &url, tmp_dir.path().to_str().unwrap()]);
+        git_clone.output().unwrap();
+
         let tmp_dir_path = tmp_dir.path();
 
         let auth_keys = tmp_dir_path.join("authorized_keys");
@@ -44,6 +47,6 @@ fn main() {
         if auth_keys.exists() {
             println!("neat");
         }
-        // if 
+        // if
     }
 }
