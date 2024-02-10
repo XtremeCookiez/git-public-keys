@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 config = "0.13.4"
 git2 = "0.18.1"
+log = "0.4.20"
 tempdir = "0.3.7"

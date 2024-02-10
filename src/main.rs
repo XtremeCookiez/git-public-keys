@@ -1,6 +1,9 @@
 use config::Config;
+use std::collections;
 use std::collections::hash_map::DefaultHasher;
+use std::fs::File;
 use std::hash::Hasher;
+use std::io::{self, BufRead};
 use std::path::Path;
 use std::process::Command;
 use std::{collections::HashSet, env::temp_dir, hash::Hash};
@@ -10,6 +13,20 @@ fn debug_print(debug: bool, msg: String) {
     if debug {
         println!("{}", msg);
     }
+}
+
+fn read_key_file<P>(filename: P) -> io::Result<collections::HashSet<String>> 
+where
+    P: AsRef<Path>,
+{
+    let file = File::open(filename)?;
+    let lines = io::BufReader::new(file).lines();
+    let mut keys = HashSet::new();
+    for key in lines {
+        keys.insert(key.unwrap());
+    }
+
+    return Ok(keys);
 }
 
 fn main() {
@@ -23,6 +40,11 @@ fn main() {
 
     let urls = config.get::<Vec<String>>("repos.urls").unwrap();
     debug_print(debug, format!("{:?}", urls));
+
+    let fuckin_string = config.get::<String>("authorized_keys.path").unwrap();
+
+    let auth_keys_path = Path::new(&fuckin_string);
+    let keys = read_key_file(&auth_keys_path);
 
     for url in urls {
         let mut s = DefaultHasher::new();
