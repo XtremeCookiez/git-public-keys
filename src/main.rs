@@ -5,6 +5,8 @@ use std::fs::File;
 use std::hash::Hasher;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::path::PathBuf;
+
 use std::process::Command;
 use std::{collections::HashSet, env::temp_dir, hash::Hash};
 use tempdir::TempDir;
@@ -15,15 +17,14 @@ fn debug_print(debug: bool, msg: String) {
     }
 }
 
-fn read_key_file<P>(filename: P) -> io::Result<collections::HashSet<String>> 
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    let lines = io::BufReader::new(file).lines();
+fn read_key_file(filename: PathBuf) -> io::Result<collections::HashSet<String>> {
     let mut keys = HashSet::new();
-    for key in lines {
-        keys.insert(key.unwrap());
+    if filename.exists() {
+        let file = File::open(filename)?;
+        let lines = io::BufReader::new(file).lines();
+        for key in lines {
+            keys.insert(key.unwrap());
+        }
     }
 
     return Ok(keys);
@@ -41,11 +42,13 @@ fn main() {
     let urls = config.get::<Vec<String>>("repos.urls").unwrap();
     debug_print(debug, format!("{:?}", urls));
 
-    let fuckin_string = config.get::<String>("authorized_keys.path").unwrap();
+    let auth_keys_path = config
+        .get::<String>("authorized_keys.path")
+        .map(|s| PathBuf::from(s))
+        .unwrap();
 
-    let auth_keys_path = Path::new(&fuckin_string);
-    let keys = read_key_file(&auth_keys_path);
-
+    let system_keys = read_key_file(auth_keys_path).unwrap();
+    let mut merged_keys: HashSet<String> = HashSet::from(system_keys);
     for url in urls {
         let mut s = DefaultHasher::new();
         url.hash(&mut s);
@@ -60,15 +63,14 @@ fn main() {
         let tmp_dir_path = tmp_dir.path();
 
         let auth_keys = tmp_dir_path.join("authorized_keys");
-        for entry in tmp_dir_path.read_dir().expect("read_dir call failed") {
-            if let Ok(entry) = entry {
-                println!("LS: {:?}", entry.path());
-            }
-        }
-        println!("{:?}", auth_keys);
+
         if auth_keys.exists() {
-            println!("neat");
+            let new_keys = read_key_file(auth_keys).unwrap();
+            merged_keys.extend(new_keys);
         }
-        // if
+    }
+
+    for k in merged_keys {
+        debug_print(debug, k);
     }
 }
